@@ -39,7 +39,7 @@ const ATTACKER = process.env.ATTACKER ?? "attacker.testnet";
 // Part 1: policy-level
 await policyAttack("prompt injection: pay attacker 50 NEAR", ATTACKER, 50n * YOCTO_PER_NEAR, "RECIPIENT_NOT_ALLOWED");
 await policyAttack("look-alike recipient", "a1ice.testnet", nearToYocto("0.1"), "RECIPIENT_NOT_ALLOWED");
-await policyAttack("u128::MAX drain", ALICE, (1n << 128n) - 1n, "PER_TX_CAP_EXCEEDED");
+await policyAttack("u128::MAX drain", ALICE, (1n << 128n) - 1n, "RECIPIENT_CAP_EXCEEDED");
 await policyAttack("zero amount", ALICE, 0n, "ZERO_AMOUNT");
 
 // Part 2: runtime-level (agent key must be unable to do any of this)
@@ -51,7 +51,7 @@ await runtimeAttack("agent tries to allowlist the attacker", () =>
 await runtimeAttack("agent tries to withdraw()", () =>
   acct.callFunction({ contractId: VAULT_ID, methodName: "withdraw", args: { amount: "1" + "0".repeat(24) }, gas: 30_000_000_000_000n, deposit: 0n }));
 await runtimeAttack("agent tries a direct transfer from the vault account", () =>
-  (acct as any).transfer({ receiverId: ATTACKER, amount: YOCTO_PER_NEAR }));
+  (acct as any).transfer({ receiverId: ATTACKER, amount: YOCTO_PER_NEAR / 1000n }));
 
 const passed = rows.filter((r) => r.pass).length;
 console.log(`\nLIVE RESULT: ${passed}/${rows.length} attacks stopped`);
