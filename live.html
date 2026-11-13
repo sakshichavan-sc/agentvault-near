@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AgentVault on NEAR · Live vault</title>
+<style>
+:root{--bg:#0b0f14;--card:#121923;--line:#223042;--tx:#e6edf5;--mut:#8aa0b6;--ok:#3ddc97;--bad:#ff5d73;--acc:#7aa2ff;--warn:#ffc857}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:36px 20px 80px}
+h1{font-size:28px;margin:0 0 4px}h2{font-size:17px;margin:0 0 12px}.sub{color:var(--mut);margin:0 0 22px}
+a{color:var(--acc)}code{background:#0e1620;padding:1px 6px;border-radius:6px;font-size:13px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+.big{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}.lab{color:var(--mut);font-size:13px}
+.badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;margin-left:8px;vertical-align:middle}
+.b-ok{background:#12372a;color:var(--ok)}.b-bad{background:#3a1822;color:var(--bad)}.b-warn{background:#3a2f12;color:var(--warn)}
+.bar{height:10px;background:#0e1620;border-radius:6px;overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;background:var(--ok)}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:8px 10px;border-top:1px solid var(--line);text-align:left}th{color:var(--mut);font-weight:500}
+input{background:#0e1620;border:1px solid var(--line);color:var(--tx);border-radius:8px;padding:9px 11px;font-size:14px}
+input.w{width:290px}input.n{width:130px}
+button{background:var(--acc);color:#05101f;border:0;border-radius:8px;padding:9px 14px;font-weight:700;cursor:pointer;font-size:14px}
+button.ghost{background:#0e1620;color:var(--tx);border:1px solid var(--line);font-weight:500;font-size:13px;padding:6px 10px}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+#verdict{margin-top:14px;padding:14px;border-radius:10px;font-size:15px;display:none}
+#verdict.ok{background:#12372a;border:1px solid #1f6b4f}#verdict.bad{background:#3a1822;border:1px solid #7a2f40}
+.err{color:var(--bad)}footer{color:var(--mut);font-size:13px;margin-top:24px}
+</style></head><body><main>
+<h1>AgentVault <span style="color:var(--acc)">on NEAR</span> <span id="status" class="badge b-warn">loading…</span></h1>
+<p class="sub">Live read of the real vault contract <a id="vlink" target="_blank" rel="noopener"></a> on NEAR testnet. The AI agent is untrusted: the contract enforces these limits, whatever the agent says.</p>
+<div id="loaderr" class="err"></div>
+
+<div class="row">
+  <div class="card"><div class="lab">Vault balance (spendable)</div><div class="big" id="spendable">…</div></div>
+  <div class="card"><div class="lab">Actions approved</div><div class="big" style="color:var(--ok)" id="allowed">…</div></div>
+  <div class="card"><div class="lab">Attacks / violations blocked</div><div class="big" style="color:var(--bad)" id="rejected">…</div></div>
+</div>
+
+<div class="card"><h2>Rolling 24h budget</h2>
+  <div><b id="spent">…</b> <span class="lab">spent of</span> <b id="budget">…</b></div>
+  <div class="bar"><i id="barfill" style="width:0%"></i></div></div>
+
+<div class="card"><h2>Owner-defined limits (the agent can never change these)</h2>
+  <table><tr><th>Per-payment cap</th><td id="cap">…</td><th>Cooldown</th><td id="cool">…</td></tr>
+  <tr><th>Max actions / session</th><td id="maxa">…</td><th>Session expires</th><td id="exp">…</td></tr>
+  <tr><th>Owner</th><td id="owner">…</td><th>Kill switch</th><td id="paused">…</td></tr></table>
+  <h2 style="margin-top:16px">Recipient allowlist</h2><table id="allow"></table></div>
+
+<div class="card"><h2>Try to attack it</h2>
+  <p class="lab" style="margin-top:0">This calls the real contract's <code>check_action</code> view (a dry run: nothing is sent, no key needed). The verdict is computed on-chain by the same policy engine that guards the funds.</p>
+  <div class="pills">
+    <button class="ghost" data-to="attacker.testnet" data-amt="50">Prompt injection: 50 NEAR to attacker</button>
+    <button class="ghost" data-to="a1ice.testnet" data-amt="0.1">Look-alike address</button>
+    <button class="ghost" data-to="ALICE" data-amt="5">Over the cap</button>
+    <button class="ghost" data-to="ALICE" data-amt="0.1">A legitimate payment</button>
+  </div>
+  <input class="w" id="to" placeholder="recipient account"> <input class="n" id="amt" placeholder="amount in NEAR"> <button id="go">Check on-chain</button>
+  <div id="verdict"></div></div>
+
+<div class="card"><h2>Live red-team on testnet: 8/8 attacks stopped</h2>
+  <table>
+  <tr><td>Prompt injection: pay attacker 50 NEAR</td><td><span class="badge b-bad">RECIPIENT_NOT_ALLOWED</span></td></tr>
+  <tr><td>Look-alike recipient address</td><td><span class="badge b-bad">RECIPIENT_NOT_ALLOWED</span></td></tr>
+  <tr><td>u128::MAX drain</td><td><span class="badge b-bad">RECIPIENT_CAP_EXCEEDED</span></td></tr>
+  <tr><td>Zero-amount action</td><td><span class="badge b-bad">ZERO_AMOUNT</span></td></tr>
+  <tr><td>Agent key calls owner-only <code>set_limits</code></td><td><span class="badge b-bad">REFUSED BY NEAR RUNTIME</span></td></tr>
+  <tr><td>Agent key tries to allowlist the attacker</td><td><span class="badge b-bad">REFUSED BY NEAR RUNTIME</span></td></tr>
+  <tr><td>Agent key calls <code>withdraw</code></td><td><span class="badge b-bad">REFUSED BY NEAR RUNTIME</span></td></tr>
+  <tr><td>Agent key attempts a direct transfer</td><td><span class="badge b-bad">REFUSED: requires full access</span></td></tr>
+  </table>
+  <p class="lab">Plus 17/17 offline attacks blocked and 12/12 legitimate actions allowed. Every blocked attack on-chain leaves an <code>action_rejected</code> event: <a id="elink" target="_blank" rel="noopener">view on the explorer</a>.</p></div>
+
+<footer>Code: <a href="https://github.com/sakshichavan-sc/agentvault-near" target="_blank" rel="noopener">github.com/sakshichavan-sc/agentvault-near</a> · Track: AI Security &amp; Defense · Testnet only, not audited.</footer>
+</main>
+<script>
+const VAULT="sakshiav-vault.testnet";
+const RPCS=["https://test.rpc.fastnear.com","https://rpc.testnet.near.org"];
+const $=id=>document.getElementById(id);
+$("vlink").textContent=VAULT;$("vlink").href="https://testnet.nearblocks.io/address/"+VAULT;$("elink").href=$("vlink").href;
+const Y=10n**24n;
+const near=y=>{y=BigInt(y);const w=y/Y,f=((y%Y)/(10n**20n)).toString().padStart(4,"0");return w+"."+f+" NEAR"};
+function toYocto(s){if(!/^\d+(\.\d{1,24})?$/.test(s))throw new Error("amount must be a plain number like 0.5");const [w,f=""]=s.split(".");return (BigInt(w)*Y+BigInt(f.padEnd(24,"0"))).toString()}
+async function rpc(params){let last;for(const url of RPCS){try{
+  const r=await fetch(url,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:"av",method:"query",params})});
+  const j=await r.json();if(j.error)throw new Error(JSON.stringify(j.error));if(j.result&&j.result.error)throw new Error(j.result.error);return j.result}catch(e){last=e}}throw last}
+async function view(method,args={}){const res=await rpc({request_type:"call_function",finality:"final",account_id:VAULT,method_name:method,args_base64:btoa(JSON.stringify(args))});
+  return JSON.parse(new TextDecoder().decode(new Uint8Array(res.result)))}
+let ALICE="";
+async function load(){
+  try{
+    const [p,s]=await Promise.all([view("get_policy"),view("get_stats")]);
+    $("loaderr").textContent="";
+    const spent=BigInt(s.spent_in_window),budget=BigInt(p.budget);
+    $("spendable").textContent=near(s.spendable_balance);$("allowed").textContent=s.allowed_count;$("rejected").textContent=s.rejected_count;
+    $("spent").textContent=near(spent);$("budget").textContent=near(budget);
+    $("barfill").style.width=(budget>0n?Math.min(100,Number(spent*10000n/budget)/100):0)+"%";
+    $("cap").textContent=near(p.per_tx_cap);$("cool").textContent=p.cooldown_secs+" s";$("maxa").textContent=p.max_actions+" (used "+s.actions_used+")";
+    const expMs=Number(p.expires_at_ns)/1e6;$("exp").textContent=new Date(expMs).toLocaleString();
+    $("owner").textContent=p.owner;$("paused").textContent=p.paused?"ON (paused)":"off";
+    $("allow").innerHTML="<tr><th>Account</th><th>Max per payment</th></tr>"+p.allowlist.map(a=>"<tr><td>"+a.recipient+"</td><td>"+near(a.cap_per_tx)+"</td></tr>").join("");
+    if(p.allowlist.length)ALICE=p.allowlist[0].recipient;
+    const st=$("status");
+    if(p.paused){st.textContent="PAUSED";st.className="badge b-bad"}else if(Date.now()>=expMs){st.textContent="SESSION EXPIRED";st.className="badge b-bad"}else{st.textContent="ACTIVE";st.className="badge b-ok"}
+  }catch(e){$("loaderr").textContent="Could not read the chain right now ("+e.message+"). Try again in a moment.";$("status").textContent="offline";$("status").className="badge b-warn"}
+}
+async function check(){
+  const v=$("verdict");v.style.display="block";v.className="";v.textContent="Asking the contract…";
+  try{
+    const to=$("to").value.trim().toLowerCase(),amt=toYocto($("amt").value.trim());
+    const r=await view("check_action",{to,amount:amt});
+    v.className=r.ok?"ok":"bad";
+    v.innerHTML=(r.ok?"✅ <b>ALLOWED</b>":"⛔ <b>BLOCKED: "+r.code+"</b>")+"<br><span class='lab'>"+r.message+" (dry run, nothing was sent)</span>";
+  }catch(e){v.className="bad";v.textContent="Error: "+e.message}
+}
+document.querySelectorAll("button.ghost").forEach(b=>b.onclick=()=>{$("to").value=b.dataset.to==="ALICE"?ALICE:b.dataset.to;$("amt").value=b.dataset.amt;check()});
+$("go").onclick=check;
+load();setInterval(load,20000);
+</script></body></html>
