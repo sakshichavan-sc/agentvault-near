@@ -1,0 +1,8 @@
+[package]
+name = "policy-core"
+version = "0.1.0"
+edition = "2021"
+description = "AgentVault policy engine: the single source of truth for what an AI agent may spend. Zero dependencies."
+license = "MIT"
+
+[dependencies]

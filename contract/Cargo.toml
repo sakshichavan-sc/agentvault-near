@@ -1,0 +1,24 @@
+[package]
+name = "agentvault"
+version = "0.1.0"
+edition = "2021"
+description = "AgentVault on NEAR: a vault whose spending rules an AI agent cannot change or bypass."
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "5"
+policy-core = { path = "../policy-core" }
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true
+
+# Standalone crate (policy-core stays dependency-free and testable on its own).
+[workspace]
