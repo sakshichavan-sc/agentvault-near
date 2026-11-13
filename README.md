@@ -8,6 +8,8 @@ AI agents are being given wallets. The only thing between a prompt-injected agen
 
 ## Live on NEAR testnet
 
+**Live dashboard (try to attack it yourself):** https://sakshichavan-sc.github.io/agentvault-near/live.html
+
 | | |
 |---|---|
 | Vault contract | [`sakshiav-vault.testnet`](https://testnet.nearblocks.io/address/sakshiav-vault.testnet) |
