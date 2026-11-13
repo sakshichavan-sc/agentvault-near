@@ -24,4 +24,4 @@ if (!direct) {
 
 const r = await agentExecute(proposal.to, proposal.amountYocto);
 if (r.error) console.log(`chain refused: ${r.error}`);
-else console.log(`on-chain verdict: ${r.verdict?.code ?? "(see tx)"}  ${r.explorer ?? ""}`);
+else console.log(`on-chain verdict: ${r.verdict?.code ?? "(see tx)"}  ${r.explorer ?? "-> https://testnet.nearblocks.io/address/" + process.env.VAULT_ID}`);
